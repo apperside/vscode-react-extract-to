@@ -1,0 +1,33 @@
+{
+  "name": "extract-in-memo-callback",
+  "displayName": "Extract in useMemo and useCallback",
+  "description": "Extract a declaration in a React component or custom hook into useMemo or useCallback.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {},
+  "type": "module",
+  "scripts": {
+    "test": "node --import tsx --test src/test/*.test.ts",
+    "compile": "tsc -p ."
+  },
+  "dependencies": {
+    "typescript": "^5.6.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/vscode": "^1.85.0",
+    "tsx": "^4.19.2"
+  }
+}
