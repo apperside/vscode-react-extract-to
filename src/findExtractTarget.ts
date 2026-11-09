@@ -167,7 +167,7 @@ function isMemoCallee(expr: ts.Expression): boolean {
   if (ts.isIdentifier(expr)) return expr.text === "memo" || expr.text === "forwardRef";
   if (
     ts.isPropertyAccessExpression(expr) &&
-    !expr.questionDot &&
+    !("questionDot" in expr && expr.questionDot) &&
     ts.isIdentifier(expr.expression) &&
     expr.expression.text === "React" &&
     ts.isIdentifier(expr.name)
@@ -225,7 +225,7 @@ function isGenerator(initializer: ts.Expression): boolean {
 }
 
 function isCallbackInitializer(initializer: ts.Expression): boolean {
-  return ts.isArrowFunction(initializer) || (ts.isFunctionExpression(initializer) && !initializer.asterisk);
+  return ts.isArrowFunction(initializer) || (ts.isFunctionExpression(initializer) && !initializer.asteriskToken);
 }
 
 function containsHookCall(root: ts.Node): boolean {

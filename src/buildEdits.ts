@@ -86,7 +86,7 @@ function reindentBlock(body: string): string {
 function printTypeParameters(fn: ts.FunctionDeclaration, sourceFile: ts.SourceFile): string {
   if (!fn.typeParameters?.length) return "";
   const parts = fn.typeParameters.map((parameter) => parameter.getText(sourceFile));
-  const jsx = sourceFile.scriptKind === ts.ScriptKind.TSX || sourceFile.scriptKind === ts.ScriptKind.JSX;
+  const jsx = sourceFile.fileName.endsWith("tsx") || sourceFile.fileName.endsWith("jsx");
   if (parts.length === 1 && jsx) return `<${parts[0]},>`;
   return `<${parts.join(", ")}>`;
 }
