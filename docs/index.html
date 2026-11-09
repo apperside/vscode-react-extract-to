@@ -334,6 +334,44 @@
         color: var(--ink);
       }
 
+      .slip {
+        position: absolute;
+        right: 1.15rem;
+        bottom: 0.95rem;
+        width: 9.2rem;
+        padding: 0.55rem 0.7rem 0.45rem;
+        background: #fffdf8;
+        border: 1px solid #e6d8b8;
+        border-radius: 2px 8px 3px 3px;
+        box-shadow: 2px 8px 16px rgba(70, 56, 28, 0.08);
+        transform: rotate(-2deg);
+        pointer-events: none;
+      }
+
+      .slip-kicker {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-family: "Iowan Old Style", Palatino, Georgia, serif;
+        font-size: 0.95rem;
+        color: #8d7044;
+      }
+
+      .ruled {
+        display: block;
+        min-height: 1.15rem;
+        border-bottom: 1px solid #f0e4c8;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 0.68rem;
+        line-height: 1.15rem;
+        color: transparent;
+        transition: color 0.35s ease;
+      }
+
+      .editor.wrap-memo .ruled-memo,
+      .editor.wrap-callback .ruled-cb {
+        color: var(--ink);
+      }
+
       .note {
         max-width: 36rem;
         margin: 1.75rem 0 0;
@@ -359,6 +397,10 @@
         pre {
           font-size: 0.78rem;
         }
+
+        .slip {
+          display: none;
+        }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -378,8 +420,8 @@
   <body>
     <div class="page">
       <header>
-        <span>Extract in useMemo and useCallback</span>
-        <a href="https://github.com/apperside/vscode-react-extract-to">Source</a>
+        <span>vscode-react-memoize</span>
+        <a href="https://github.com/apperside/vscode-react-memoize">Source</a>
       </header>
 
       <h1>The array is the annoying part.</h1>
@@ -405,6 +447,11 @@
 <span class="line"><span class="mark"></span><code>  <span class="kw">return</span> &lt;<span class="jsx">button</span> onClick={handleSelect}&gt;{label}&lt;/<span class="jsx">button</span>&gt;;</code></span>
 <span class="line"><span class="mark"></span><code>}</code></span>
         </pre>
+        <aside class="slip" aria-hidden="true">
+          <span class="slip-kicker">memo</span>
+          <span class="ruled ruled-memo">user.name</span>
+          <span class="ruled ruled-cb">onSelect, user.id</span>
+        </aside>
       </div>
 
       <p class="beats">

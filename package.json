@@ -1,5 +1,5 @@
 {
-  "name": "vscode-react-extract",
+  "name": "vscode-react-memoize",
   "displayName": "Instantly transform variables and function in useMemo and useCallback with tracked dependencies array",
   "version": "0.0.1",
   "description": "Extract a declaration in a React component or custom hook into useMemo or useCallback.",
@@ -10,9 +10,9 @@
   "publisher": "apperside",
   "repository": {
     "type": "git",
-    "url": "https://github.com/apperside/vscode-react-extract-to.git"
+    "url": "https://github.com/apperside/vscode-react-memoize.git"
   },
-  "homepage": "https://apperside.github.io/vscode-react-extract-to/",
+  "homepage": "https://apperside.github.io/vscode-react-memoize/",
   "type": "module",
   "main": "./out/extension.js",
   "scripts": {
