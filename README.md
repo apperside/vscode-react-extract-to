@@ -1,5 +1,7 @@
 # Extract in useMemo and useCallback
 
+Project home: https://apperside.github.io/vscode-react-extract-to/
+
 A refactor for React. Put the cursor on a variable or function inside a component, and wrap it in `useMemo` or `useCallback` with the dependency array `react-hooks/exhaustive-deps` would require.
 
 Works in JavaScript, JSX, TypeScript, and TSX.

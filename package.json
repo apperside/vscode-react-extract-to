@@ -1,17 +1,18 @@
 {
-  "name": "react-extract",
-  "displayName": "Extract in useMemo and useCallback",
+  "name": "vscode-react-extract",
+  "displayName": "Instantly transform variables and function in useMemo and useCallback with tracked dependencies array",
   "version": "0.0.1",
   "description": "Extract a declaration in a React component or custom hook into useMemo or useCallback.",
   "categories": [
     "Other"
   ],
   "license": "MIT",
-  "publisher": "local",
+  "publisher": "apperside",
   "repository": {
     "type": "git",
     "url": "https://github.com/apperside/vscode-react-extract-to.git"
   },
+  "homepage": "https://apperside.github.io/vscode-react-extract-to/",
   "type": "module",
   "main": "./out/extension.js",
   "scripts": {

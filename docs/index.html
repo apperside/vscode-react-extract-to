@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Extract in useMemo and useCallback</title>
+    <meta
+      name="description"
+      content="A VS Code refactor that wraps a variable in useMemo or a function in useCallback, and fills the dependency array."
+    />
+    <style>
+      :root {
+        --air: #e4eef2;
+        --ink: #1a242e;
+        --muted: #5c6b76;
+        --paper: #fbfaf6;
+        --rule: #e3ddd2;
+        --gutter: #f3efe6;
+        --caret: #e25b1a;
+        --hook: #0c6b64;
+        --kw: #5a4784;
+        --fn: #1a242e;
+        --punct: #6d6458;
+        --jsx: #8a4b2f;
+        --land: #d8f3ee;
+        color-scheme: light;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--air);
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        font-size: 1.125rem;
+        line-height: 1.45;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--caret);
+        outline-offset: 3px;
+      }
+
+      .page {
+        width: min(68rem, calc(100% - 2.5rem));
+        margin: 0 auto;
+        padding: 1.75rem 0 4rem;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+        font-family: system-ui, sans-serif;
+        font-size: 0.95rem;
+      }
+
+      header a {
+        text-decoration-thickness: 1px;
+        text-underline-offset: 0.2em;
+      }
+
+      h1 {
+        max-width: 16ch;
+        margin: 1.6rem 0 0.6rem;
+        font-size: clamp(2.35rem, 5.2vw, 3.6rem);
+        font-weight: 500;
+        letter-spacing: -0.03em;
+        line-height: 0.98;
+      }
+
+      .deck {
+        max-width: 38rem;
+        margin: 0 0 1.35rem;
+        color: var(--muted);
+      }
+
+      .editor {
+        position: relative;
+        background: var(--paper);
+        border: 1px solid #d9d3c7;
+        border-radius: 10px;
+        box-shadow: 0 18px 40px rgba(40, 62, 74, 0.08);
+        overflow: hidden;
+      }
+
+      .tab {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.55rem 0.85rem;
+        background: var(--gutter);
+        border-bottom: 1px solid var(--rule);
+        font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+
+      .action {
+        margin-right: auto;
+        color: transparent;
+        transition: color 0.25s ease;
+      }
+
+      .editor.offer-memo .action,
+      .editor.offer-callback .action {
+        color: var(--ink);
+      }
+
+      .editor.offer-memo .action::before {
+        content: "Extract in useMemo";
+      }
+
+      .editor.offer-callback .action::before {
+        content: "Extract in useCallback";
+      }
+
+      .again {
+        border: 0;
+        background: transparent;
+        color: var(--ink);
+        font: inherit;
+        cursor: pointer;
+        padding: 0.15rem 0.2rem;
+      }
+
+      .again:hover {
+        color: var(--caret);
+      }
+
+      pre {
+        margin: 0;
+        padding: 0.85rem 0 1rem;
+        overflow-x: auto;
+        font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+        font-size: 0.82rem;
+        line-height: 1.7;
+      }
+
+      .line {
+        display: grid;
+        grid-template-columns: 2rem minmax(0, 1fr);
+        min-height: 1.7em;
+        transition: background 0.3s ease;
+      }
+
+      .editor.show-caret-label .line-label,
+      .editor.offer-memo .line-label,
+      .editor.show-caret-handle .line-handle,
+      .editor.offer-callback .line-handle {
+        background: #fff4ec;
+      }
+
+      .mark {
+        position: relative;
+      }
+
+      .line code,
+      .clip code {
+        display: block;
+        padding-right: 1.25rem;
+        white-space: pre;
+      }
+
+      .deck code,
+      .note code {
+        font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      .kw {
+        color: var(--kw);
+      }
+      .hook {
+        color: var(--hook);
+      }
+      .fn {
+        color: var(--fn);
+      }
+      .jsx {
+        color: var(--jsx);
+      }
+      .punct {
+        color: var(--punct);
+      }
+
+      .caret {
+        display: inline-block;
+        width: 1px;
+        height: 1.05em;
+        margin-left: -1px;
+        background: transparent;
+        transform: translateY(0.16em);
+      }
+
+      .editor.show-caret-label .name-label .caret,
+      .editor.show-caret-handle .name-handle .caret {
+        background: var(--caret);
+        animation: blink 1.05s steps(1) infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      .bulb {
+        position: absolute;
+        left: 0.32rem;
+        top: 0.22rem;
+        width: 1.15rem;
+        height: 1.15rem;
+        opacity: 0;
+        transform: scale(0.6);
+        transition:
+          opacity 0.25s ease,
+          transform 0.25s ease;
+      }
+
+      .editor.offer-memo .line-label .bulb,
+      .editor.offer-callback .line-handle .bulb {
+        opacity: 1;
+        transform: none;
+      }
+
+      .ins {
+        display: inline-block;
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+        vertical-align: bottom;
+        white-space: nowrap;
+        transition:
+          max-width 0.5s cubic-bezier(0.2, 0.7, 0.2, 1),
+          opacity 0.35s ease;
+      }
+
+      .editor.wrap-memo .memo-open,
+      .editor.wrap-memo .memo-deps,
+      .editor.wrap-callback .cb-open,
+      .editor.wrap-callback .cb-deps {
+        max-width: 22rem;
+        opacity: 1;
+      }
+
+      .import-line {
+        min-height: 0;
+      }
+
+      .import-line .clip {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.4s ease;
+      }
+
+      .import-line .clip code {
+        overflow: hidden;
+        min-height: 0;
+      }
+
+      .editor.wrap-memo .import-line .clip {
+        grid-template-rows: 1fr;
+      }
+
+      .dep {
+        border-radius: 2px;
+      }
+
+      .editor.wrap-memo .dep-memo,
+      .editor.wrap-callback .dep-cb {
+        animation: land 0.9s ease;
+      }
+
+      @keyframes land {
+        0% {
+          background: var(--land);
+        }
+        100% {
+          background: transparent;
+        }
+      }
+
+      .extra-name {
+        display: inline-block;
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+        vertical-align: bottom;
+        white-space: nowrap;
+        transition:
+          max-width 0.4s ease,
+          opacity 0.3s ease;
+      }
+
+      .editor.wrap-callback .extra-name {
+        max-width: 9rem;
+        opacity: 1;
+      }
+
+      .beats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 1.25rem;
+        margin: 1.1rem 0 0;
+        font-family: system-ui, sans-serif;
+        font-size: 0.95rem;
+        color: #8ea0aa;
+      }
+
+      .beats span {
+        transition: color 0.3s ease;
+      }
+
+      .editor.show-caret-label ~ .beats [data-beat="name"],
+      .editor.show-caret-handle ~ .beats [data-beat="name"],
+      .editor.offer-memo ~ .beats [data-beat="bulb"],
+      .editor.offer-callback ~ .beats [data-beat="bulb"],
+      .editor.wrap-memo ~ .beats [data-beat="array"],
+      .editor.wrap-callback ~ .beats [data-beat="array"] {
+        color: var(--ink);
+      }
+
+      .note {
+        max-width: 36rem;
+        margin: 1.75rem 0 0;
+        color: var(--muted);
+      }
+
+      footer {
+        margin-top: 3rem;
+        font-family: system-ui, sans-serif;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      @media (max-width: 640px) {
+        .page {
+          width: min(68rem, calc(100% - 1.4rem));
+        }
+
+        h1 {
+          margin-top: 1.75rem;
+        }
+
+        pre {
+          font-size: 0.78rem;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+
+        .caret {
+          background: transparent !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <span>Extract in useMemo and useCallback</span>
+        <a href="https://github.com/apperside/vscode-react-extract-to">Source</a>
+      </header>
+
+      <h1>The array is the annoying part.</h1>
+      <p class="deck">
+        Put the cursor on a variable or a function inside a component. The lightbulb wraps it in
+        <code>useMemo</code> or <code>useCallback</code>, and fills the dependency array the way
+        <code>exhaustive-deps</code> would.
+      </p>
+
+      <div class="editor" id="editor">
+        <div class="tab">
+          <span>Profile.tsx</span>
+          <span class="action"></span>
+          <button class="again" type="button" id="again">Play again</button>
+        </div>
+        <pre>
+<span class="line import-line"><span class="mark"></span><span class="clip"><code><span class="kw">import</span> { useMemo<span class="extra-name">, useCallback</span> } <span class="kw">from</span> <span class="fn">"react"</span>;
+</code></span></span>
+<span class="line"><span class="mark"></span><code><span class="kw">function</span> <span class="fn">Profile</span>({ user, onSelect }) {</code></span>
+<span class="line line-label"><span class="mark"><svg class="bulb" viewBox="0 0 24 24" aria-hidden="true"><path fill="#e25b1a" d="M12 1.8a6.6 6.6 0 0 0-3.6 12.1c.3.2.5.5.5.8l.3 1.5h5.6l.3-1.5c.1-.3.2-.6.5-.8A6.6 6.6 0 0 0 12 1.8Z"/><path fill="#1a242e" d="M9.2 17.4h5.6v1.2c0 1.3-1.1 2.2-2.8 2.2s-2.8-.9-2.8-2.2v-1.2Z"/><path stroke="#fff6ee" stroke-width="1.6" stroke-linecap="round" d="M12 6.2v3.4"/></svg></span><code>  <span class="kw">const</span> <span class="name-label">label<span class="caret"></span></span> = <span class="ins memo-open hook">useMemo(() =&gt;&nbsp;</span>user.name.toUpperCase()<span class="ins memo-deps">, [<span class="dep dep-memo">user.name</span>]</span><span class="ins memo-open hook">)</span>;</code></span>
+<span class="line line-handle"><span class="mark"><svg class="bulb" viewBox="0 0 24 24" aria-hidden="true"><path fill="#e25b1a" d="M12 1.8a6.6 6.6 0 0 0-3.6 12.1c.3.2.5.5.5.8l.3 1.5h5.6l.3-1.5c.1-.3.2-.6.5-.8A6.6 6.6 0 0 0 12 1.8Z"/><path fill="#1a242e" d="M9.2 17.4h5.6v1.2c0 1.3-1.1 2.2-2.8 2.2s-2.8-.9-2.8-2.2v-1.2Z"/><path stroke="#fff6ee" stroke-width="1.6" stroke-linecap="round" d="M12 6.2v3.4"/></svg></span><code>  <span class="kw">const</span> <span class="name-handle">handleSelect<span class="caret"></span></span> = <span class="ins cb-open hook">useCallback(</span>() =&gt; onSelect(user.id)<span class="ins cb-deps">, [<span class="dep dep-cb">onSelect</span>, <span class="dep dep-cb">user.id</span>]</span><span class="ins cb-open hook">)</span>;</code></span>
+<span class="line"><span class="mark"></span><code></code></span>
+<span class="line"><span class="mark"></span><code>  <span class="kw">return</span> &lt;<span class="jsx">button</span> onClick={handleSelect}&gt;{label}&lt;/<span class="jsx">button</span>&gt;;</code></span>
+<span class="line"><span class="mark"></span><code>}</code></span>
+        </pre>
+      </div>
+
+      <p class="beats">
+        <span data-beat="name">Cursor on the name</span>
+        <span data-beat="bulb">The lightbulb offers one action</span>
+        <span data-beat="array">The array fills in</span>
+      </p>
+
+      <p class="note">
+        A function becomes <code>useCallback</code>. Anything else becomes <code>useMemo</code>. Setters,
+        refs, and imports stay out of the array. JavaScript, JSX, TypeScript, and TSX.
+      </p>
+
+      <footer>MIT · Visual Studio Code 1.85 or newer</footer>
+    </div>
+
+    <script>
+      const editor = document.getElementById("editor");
+      const steps = [
+        ["show-caret-label", 1300],
+        ["offer-memo", 1050],
+        ["wrap-memo", 1500],
+        ["show-caret-handle", 900],
+        ["offer-callback", 1050],
+        ["wrap-callback", 2400],
+      ];
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let timers = [];
+
+      function clear() {
+        for (const id of timers) clearTimeout(id);
+        timers = [];
+      }
+
+      function play() {
+        clear();
+        editor.className = "editor";
+        if (reduced) {
+          editor.classList.add("wrap-memo", "wrap-callback");
+          return;
+        }
+        let at = 350;
+        for (const [name, wait] of steps) {
+          const stamp = at;
+          timers.push(
+            setTimeout(() => {
+              if (name.startsWith("show-caret")) {
+                editor.classList.remove("show-caret-label", "show-caret-handle", "offer-memo", "offer-callback");
+              }
+              if (name.startsWith("offer")) {
+                editor.classList.remove("offer-memo", "offer-callback", "show-caret-label", "show-caret-handle");
+              }
+              editor.classList.add(name);
+            }, stamp),
+          );
+          at += wait;
+        }
+        timers.push(setTimeout(play, at + 700));
+      }
+
+      document.getElementById("again").addEventListener("click", play);
+      window.playDemo = play;
+      window.clearDemo = clear;
+      play();
+    </script>
+  </body>
+</html>
