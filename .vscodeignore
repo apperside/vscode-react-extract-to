@@ -1,0 +1,12 @@
+.superpowers/**
+src/**
+docs/**
+**/*.map
+**/*.ts
+**/*.vsix
+tsconfig.json
+package-lock.json
+.oxlintrc.json
+.oxfmtrc.json
+.gitignore
+.vscode/**
