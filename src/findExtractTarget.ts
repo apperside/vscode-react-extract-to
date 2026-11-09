@@ -69,8 +69,9 @@ function finish(
   if (!kind) return undefined;
   const initializer = declaration.initializer;
   if (!initializer) return undefined;
-  if (isGenerator(initializer) || containsHookCall(initializer)) return undefined;
-  const hook: HookKind = isCallbackInitializer(initializer) ? "useCallback" : "useMemo";
+  const unwrapped = unwrapExpression(initializer);
+  if (isGenerator(unwrapped) || containsHookCall(initializer)) return undefined;
+  const hook: HookKind = isCallbackInitializer(unwrapped) ? "useCallback" : "useMemo";
   return {
     reactiveFunction: reactive,
     statement,
@@ -132,8 +133,8 @@ function isFunctionLike(node: ts.Node): node is ts.FunctionLikeDeclaration {
 
 function isReactive(fn: ts.FunctionLikeDeclaration): boolean {
   if (isInsideClass(fn)) return false;
-  const name = ownName(fn) ?? assignedName(fn);
-  if (name && (/^[A-Z]/.test(name) || /^use[A-Z0-9]/.test(name))) return true;
+  const names = [ownName(fn), assignedName(fn)].filter((name): name is string => !!name);
+  if (names.some((name) => /^[A-Z]/.test(name) || /^use[A-Z0-9]/.test(name))) return true;
   if (ts.isFunctionDeclaration(fn) && !fn.name && hasModifier(fn, ts.SyntaxKind.ExportKeyword) && hasModifier(fn, ts.SyntaxKind.DefaultKeyword)) {
     return true;
   }
@@ -220,6 +221,19 @@ function hasOverload(body: ts.Block, fn: ts.FunctionDeclaration): boolean {
   return false;
 }
 
+function unwrapExpression(expr: ts.Expression): ts.Expression {
+  let current = expr;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isSatisfiesExpression(current) ||
+    ts.isNonNullExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return current;
+}
+
 function isGenerator(initializer: ts.Expression): boolean {
   return ts.isFunctionExpression(initializer) && !!initializer.asteriskToken;
 }
@@ -242,12 +256,6 @@ function containsHookCall(root: ts.Node): boolean {
   if (ts.isCallExpression(unwrapped) && isHookCallee(unwrapExpression(unwrapped.expression))) return true;
   visit(root);
   return found;
-}
-
-function unwrapExpression(expr: ts.Expression): ts.Expression {
-  let current = expr;
-  while (ts.isParenthesizedExpression(current) || ts.isAsExpression(current)) current = current.expression;
-  return current;
 }
 
 function isHookCallee(expr: ts.Expression): boolean {

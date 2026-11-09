@@ -50,7 +50,7 @@ function rewriteStatement(
     : `() => ${initializerText(initializer, sourceFile)}`;
   const multiline = (target.hook === "useCallback" ? initializer.getText(sourceFile) : initializer.getText(sourceFile)).includes("\n");
   const call = printCall(callee, callback, dependencies, multiline, baseIndent);
-  const type = ts.isIdentifier(declaration.name) && declaration.type ? `: ${declaration.type.getText(sourceFile)}` : "";
+  const type = declaration.type ? `: ${declaration.type.getText(sourceFile)}` : "";
   const extracted = `const ${declaration.name.getText(sourceFile)}${type} = ${call};`;
   const list = declaration.parent;
   if (!ts.isVariableDeclarationList(list) || list.declarations.length === 1) return extracted;
@@ -62,10 +62,23 @@ function rewriteStatement(
 
 function initializerText(initializer: ts.Expression, sourceFile: ts.SourceFile): string {
   const text = initializer.getText(sourceFile);
-  let current = initializer;
-  while (ts.isParenthesizedExpression(current)) current = current.expression;
-  if (ts.isObjectLiteralExpression(current) && !text.trimStart().startsWith("(")) return `(${text})`;
+  if (startsWithObject(initializer) && !text.trimStart().startsWith("(")) return `(${text})`;
   return text;
+}
+
+function startsWithObject(expr: ts.Expression): boolean {
+  let current = expr;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isSatisfiesExpression(current) ||
+    ts.isNonNullExpression(current) ||
+    ts.isPropertyAccessExpression(current) ||
+    ts.isElementAccessExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return ts.isObjectLiteralExpression(current);
 }
 
 function printArrow(fn: ts.FunctionDeclaration, sourceFile: ts.SourceFile): string {
@@ -73,14 +86,8 @@ function printArrow(fn: ts.FunctionDeclaration, sourceFile: ts.SourceFile): stri
   const typeParameters = printTypeParameters(fn, sourceFile);
   const parameters = fn.parameters.map((parameter) => parameter.getText(sourceFile)).join(", ");
   const returnType = fn.type ? `: ${fn.type.getText(sourceFile)}` : "";
-  const body = fn.body ? reindentBlock(fn.body.getText(sourceFile)) : "{}";
+  const body = fn.body ? fn.body.getText(sourceFile) : "{}";
   return `${asyncPrefix}${typeParameters}(${parameters})${returnType} => ${body}`;
-}
-
-function reindentBlock(body: string): string {
-  if (!body.includes("\n")) return body;
-  const lines = body.split("\n");
-  return lines.map((line, index) => (index === 0 ? line : `  ${line}`)).join("\n");
 }
 
 function printTypeParameters(fn: ts.FunctionDeclaration, sourceFile: ts.SourceFile): string {
@@ -132,9 +139,20 @@ function ensureReactImport(sourceFile: ts.SourceFile, hook: string): TextEdit | 
   if (anchor) {
     return { start: anchor.getEnd(), end: anchor.getEnd(), newText: `\nimport { ${hook} } from "react";` };
   }
-  const firstImport = sourceFile.statements.find(ts.isImportDeclaration);
-  const position = firstImport ? firstImport.getStart(sourceFile) : 0;
+  const prologue = directiveEnd(sourceFile);
+  if (prologue > 0) return { start: prologue, end: prologue, newText: `\nimport { ${hook} } from "react";` };
+  const first = sourceFile.statements[0];
+  const position = first ? first.getStart(sourceFile) : 0;
   return { start: position, end: position, newText: `import { ${hook} } from "react";\n` };
+}
+
+function directiveEnd(sourceFile: ts.SourceFile): number {
+  let end = 0;
+  for (const statement of sourceFile.statements) {
+    if (!ts.isExpressionStatement(statement) || !ts.isStringLiteral(statement.expression)) break;
+    end = statement.getEnd();
+  }
+  return end;
 }
 
 function hasValueSpecifier(statement: ts.ImportDeclaration, hook: string): boolean {

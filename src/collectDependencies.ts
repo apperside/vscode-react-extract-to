@@ -38,7 +38,11 @@ function collectReferences(sourceFile: ts.SourceFile): Reference[] {
 function visit(node: ts.Node, scope: Scope, references: Reference[]): void {
   if (isFunctionLike(node)) {
     const functionScope: Scope = { parent: scope, bindings: new Map() };
+    if ((ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node)) && node.name) {
+      functionScope.bindings.set(node.name.text, node.name);
+    }
     for (const parameter of node.parameters) bindBindingName(functionScope, parameter.name);
+    if (node.body) bindFunctionVars(functionScope, node.body);
     for (const parameter of node.parameters) {
       if (parameter.initializer) visit(parameter.initializer, functionScope, references);
     }
@@ -55,6 +59,31 @@ function visit(node: ts.Node, scope: Scope, references: Reference[]): void {
     const blockScope: Scope = { parent: scope, bindings: new Map() };
     bindBlock(blockScope, node);
     for (const statement of node.statements) visit(statement, blockScope, references);
+    return;
+  }
+  if (ts.isForOfStatement(node) || ts.isForInStatement(node)) {
+    const loopScope: Scope = { parent: scope, bindings: new Map() };
+    if (ts.isVariableDeclarationList(node.initializer)) {
+      for (const declaration of node.initializer.declarations) bindBindingName(loopScope, declaration.name);
+    }
+    visit(node.expression, scope, references);
+    visit(node.statement, loopScope, references);
+    return;
+  }
+  if (ts.isForStatement(node)) {
+    const loopScope: Scope = { parent: scope, bindings: new Map() };
+    if (node.initializer && ts.isVariableDeclarationList(node.initializer)) {
+      for (const declaration of node.initializer.declarations) bindBindingName(loopScope, declaration.name);
+    } else if (node.initializer) visit(node.initializer, scope, references);
+    if (node.condition) visit(node.condition, loopScope, references);
+    if (node.incrementor) visit(node.incrementor, loopScope, references);
+    visit(node.statement, loopScope, references);
+    return;
+  }
+  if (ts.isCatchClause(node)) {
+    const catchScope: Scope = { parent: scope, bindings: new Map() };
+    if (node.variableDeclaration) bindBindingName(catchScope, node.variableDeclaration.name);
+    visit(node.block, catchScope, references);
     return;
   }
   if (ts.isIdentifier(node) && isValueReference(node)) {
@@ -83,8 +112,22 @@ function bindModule(scope: Scope, sourceFile: ts.SourceFile): void {
 function bindBlock(scope: Scope, block: ts.Block): void {
   for (const statement of block.statements) {
     if (ts.isFunctionDeclaration(statement) && statement.name) scope.bindings.set(statement.name.text, statement.name);
+    if (ts.isClassDeclaration(statement) && statement.name) scope.bindings.set(statement.name.text, statement.name);
     if (ts.isVariableStatement(statement)) bindVariableStatement(scope, statement);
   }
+}
+
+function bindFunctionVars(scope: Scope, body: ts.Node): void {
+  const visitNode = (node: ts.Node) => {
+    if (isFunctionLike(node)) return;
+    if (ts.isVariableStatement(node) && isVarList(node.declarationList)) bindVariableStatement(scope, node);
+    ts.forEachChild(node, visitNode);
+  };
+  ts.forEachChild(body, visitNode);
+}
+
+function isVarList(list: ts.VariableDeclarationList): boolean {
+  return (list.flags & ts.NodeFlags.Let) === 0 && (list.flags & ts.NodeFlags.Const) === 0;
 }
 
 function bindVariableStatement(scope: Scope, statement: ts.VariableStatement): void {
@@ -124,6 +167,7 @@ function isValueReference(node: ts.Identifier): boolean {
   if (ts.isImportSpecifier(parent) || ts.isImportClause(parent) || ts.isNamespaceImport(parent)) return false;
   if (ts.isClassDeclaration(parent) || ts.isInterfaceDeclaration(parent) || ts.isTypeAliasDeclaration(parent)) return false;
   if (ts.isMethodDeclaration(parent) && parent.name === node) return false;
+  if (ts.isJsxAttribute(parent)) return false;
   if (ts.isJsxOpeningElement(parent) || ts.isJsxSelfClosingElement(parent) || ts.isJsxClosingElement(parent)) {
     return parent.tagName === node && /^[A-Z]/.test(node.text);
   }
@@ -149,13 +193,13 @@ function dependencyKey(ident: ts.Identifier): string | undefined {
 }
 
 function widen(node: ts.Node): ts.Node {
-  const parent = node.parent;
+  const parent = significantParent(node);
   if (
     parent &&
     ts.isPropertyAccessExpression(parent) &&
-    parent.expression === node &&
+    sameExpression(parent.expression, node) &&
     parent.name.text !== "current" &&
-    !(isCallLike(parent.parent) && parent.parent.expression === parent)
+    !isCallee(parent)
   ) {
     return widen(parent);
   }
@@ -164,11 +208,32 @@ function widen(node: ts.Node): ts.Node {
     parent &&
     ts.isBinaryExpression(parent) &&
     parent.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-    parent.left === node
+    sameExpression(parent.left, node)
   ) {
     return node.expression;
   }
   return node;
+}
+
+function significantParent(node: ts.Node): ts.Node | undefined {
+  let current = node;
+  while (current.parent && isWrapper(current.parent) && current.parent.expression === current) current = current.parent;
+  return current.parent;
+}
+
+function sameExpression(candidate: ts.Node, target: ts.Node): boolean {
+  let current = candidate;
+  while (isWrapper(current)) current = current.expression;
+  return current === target;
+}
+
+function isWrapper(node: ts.Node): node is ts.ParenthesizedExpression | ts.AsExpression | ts.SatisfiesExpression | ts.NonNullExpression {
+  return ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node);
+}
+
+function isCallee(member: ts.Node): boolean {
+  const parent = significantParent(member);
+  return !!parent && isCallLike(parent) && sameExpression(parent.expression, member);
 }
 
 function isCallLike(node: ts.Node | undefined): node is ts.CallExpression | ts.NewExpression {
@@ -176,6 +241,7 @@ function isCallLike(node: ts.Node | undefined): node is ts.CallExpression | ts.N
 }
 
 function chainText(node: ts.Node): string | undefined {
+  if (isWrapper(node)) return chainText(node.expression);
   if (ts.isIdentifier(node)) return node.text;
   if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.name)) {
     const object = chainText(node.expression);
@@ -232,9 +298,8 @@ function directFunction(decl: ts.Node, reactive: ts.FunctionLikeDeclaration): ts
     if (ts.isFunctionDeclaration(statement) && statement.name === decl) return statement;
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations) {
-      if (declaration.name === decl && declaration.initializer && isFunctionExpressionLike(declaration.initializer)) {
-        return declaration.initializer;
-      }
+      const initializer = declaration.initializer && unwrapExpression(declaration.initializer);
+      if (declaration.name === decl && initializer && isFunctionExpressionLike(initializer)) return initializer;
     }
   }
   return undefined;
@@ -263,8 +328,12 @@ function isStableLiteral(node: ts.Expression): boolean {
 }
 
 function unwrapAs(expr: ts.Expression): ts.Expression {
+  return unwrapExpression(expr);
+}
+
+function unwrapExpression(expr: ts.Expression): ts.Expression {
   let current = expr;
-  while (ts.isAsExpression(current) || ts.isParenthesizedExpression(current)) current = current.expression;
+  while (isWrapper(current)) current = current.expression;
   return current;
 }
 

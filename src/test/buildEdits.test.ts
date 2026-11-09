@@ -180,8 +180,8 @@ test("multiline function declaration", () => {
 function Profile({ user, onSelect }: Props) {
   const handleSelect = useCallback(
     () => {
-      onSelect(user.id);
-    },
+    onSelect(user.id);
+  },
     [onSelect, user.id],
   );
 }
@@ -199,8 +199,8 @@ test("async function declaration", () => {
 function Profile({ user, onSelect }: Props) {
   const handleSelect = useCallback(
     async () => {
-      onSelect(user.id);
-    },
+    onSelect(user.id);
+  },
     [onSelect, user.id],
   );
 }
@@ -218,8 +218,8 @@ test("tsx generic gains a trailing comma", () => {
 function Profile() {
   const identity = useCallback(
     <T,>(value: T): T => {
-      return value;
-    },
+    return value;
+  },
     [],
   );
 }
