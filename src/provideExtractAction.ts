@@ -13,8 +13,17 @@ export function provideExtractAction(
   selection: Selection,
   scriptKind: ts.ScriptKind,
 ): ExtractAction | undefined {
-  const fileName = scriptKind === ts.ScriptKind.TSX || scriptKind === ts.ScriptKind.JSX ? "fixture.tsx" : "fixture.ts";
-  const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, scriptKind);
+  const fileName =
+    scriptKind === ts.ScriptKind.TSX || scriptKind === ts.ScriptKind.JSX
+      ? "fixture.tsx"
+      : "fixture.ts";
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind,
+  );
   const target = findExtractTarget(sourceFile, selection);
   if (!target) return undefined;
   return {

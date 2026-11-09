@@ -7,7 +7,10 @@ import { findExtractTarget } from "../findExtractTarget.js";
 
 function apply(source: string, edits: TextEdit[]): string {
   const ordered = [...edits].sort((left, right) => right.start - left.start);
-  return ordered.reduce((text, edit) => text.slice(0, edit.start) + edit.newText + text.slice(edit.end), source);
+  return ordered.reduce(
+    (text, edit) => text.slice(0, edit.start) + edit.newText + text.slice(edit.end),
+    source,
+  );
 }
 
 function rewrite(source: string, binding: string, kind = ts.ScriptKind.TSX): string {
@@ -32,12 +35,15 @@ test("Profile label", () => {
   const handleSelect = () => onSelect(user.id);
 }
 `;
-  assert.equal(rewrite(source, "label"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import { useMemo } from "react";
 function Profile({ user, onSelect }: Props) {
   const label = useMemo(() => user.name.toUpperCase(), [user.name]);
   const handleSelect = () => onSelect(user.id);
 }
-`);
+`,
+  );
 });
 
 test("Profile handler", () => {
@@ -46,12 +52,15 @@ test("Profile handler", () => {
   const handleSelect = () => onSelect(user.id);
 }
 `;
-  assert.equal(rewrite(source, "handleSelect"), `import { useCallback } from "react";
+  assert.equal(
+    rewrite(source, "handleSelect"),
+    `import { useCallback } from "react";
 function Profile({ user, onSelect }: Props) {
   const label = user.name.toUpperCase();
   const handleSelect = useCallback(() => onSelect(user.id), [onSelect, user.id]);
 }
-`);
+`,
+  );
 });
 
 test("props parameter", () => {
@@ -59,11 +68,14 @@ test("props parameter", () => {
   const label = props.user.name;
 }
 `;
-  assert.equal(rewrite(source, "label"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import { useMemo } from "react";
 function Profile(props: Props) {
   const label = useMemo(() => props.user.name, [props.user.name]);
 }
-`);
+`,
+  );
 });
 
 test("split declarator", () => {
@@ -71,12 +83,15 @@ test("split declarator", () => {
   const a = 1, b = props.b, c = 3;
 }
 `;
-  assert.equal(rewrite(source, "b"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "b"),
+    `import { useMemo } from "react";
 function Profile(props: Props) {
   const a = 1, c = 3;
   const b = useMemo(() => props.b, [props.b]);
 }
-`);
+`,
+  );
 });
 
 test("split keeps let on the untouched declarator", () => {
@@ -84,12 +99,15 @@ test("split keeps let on the untouched declarator", () => {
   let a = 1, b = props.b;
 }
 `;
-  assert.equal(rewrite(source, "b"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "b"),
+    `import { useMemo } from "react";
 function Profile(props: Props) {
   let a = 1;
   const b = useMemo(() => props.b, [props.b]);
 }
-`);
+`,
+  );
 });
 
 test("let becomes const", () => {
@@ -97,11 +115,14 @@ test("let becomes const", () => {
   let label = user.name;
 }
 `;
-  assert.equal(rewrite(source, "label"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import { useMemo } from "react";
 function Profile({ user }: Props) {
   const label = useMemo(() => user.name, [user.name]);
 }
-`);
+`,
+  );
 });
 
 test("destructuring pattern", () => {
@@ -109,11 +130,14 @@ test("destructuring pattern", () => {
   const { name } = user;
 }
 `;
-  assert.equal(rewrite(source, "{ name }"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "{ name }"),
+    `import { useMemo } from "react";
 function Profile({ user }: Props) {
   const { name } = useMemo(() => user, [user]);
 }
-`);
+`,
+  );
 });
 
 test("type annotation stays on the binding", () => {
@@ -121,11 +145,14 @@ test("type annotation stays on the binding", () => {
   const label: string = user.name;
 }
 `;
-  assert.equal(rewrite(source, "label"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import { useMemo } from "react";
 function Profile({ user }: Props) {
   const label: string = useMemo(() => user.name, [user.name]);
 }
-`);
+`,
+  );
 });
 
 test("object literal is parenthesized", () => {
@@ -133,11 +160,14 @@ test("object literal is parenthesized", () => {
   const label = { a: 1 };
 }
 `;
-  assert.equal(rewrite(source, "label"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import { useMemo } from "react";
 function Profile() {
   const label = useMemo(() => ({ a: 1 }), []);
 }
-`);
+`,
+  );
 });
 
 test("multiline initializer", () => {
@@ -146,7 +176,9 @@ test("multiline initializer", () => {
     user.email;
 }
 `;
-  assert.equal(rewrite(source, "label"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import { useMemo } from "react";
 function Profile({ user }: Props) {
   const label = useMemo(
     () => user.name +
@@ -154,7 +186,8 @@ function Profile({ user }: Props) {
     [user.name, user.email],
   );
 }
-`);
+`,
+  );
 });
 
 test("one-line function declaration", () => {
@@ -162,11 +195,14 @@ test("one-line function declaration", () => {
   function handleSelect() { onSelect(id); }
 }
 `;
-  assert.equal(rewrite(source, "handleSelect"), `import { useCallback } from "react";
+  assert.equal(
+    rewrite(source, "handleSelect"),
+    `import { useCallback } from "react";
 function Profile({ id, onSelect }: Props) {
   const handleSelect = useCallback(() => { onSelect(id); }, [onSelect, id]);
 }
-`);
+`,
+  );
 });
 
 test("multiline function declaration", () => {
@@ -176,7 +212,9 @@ test("multiline function declaration", () => {
   }
 }
 `;
-  assert.equal(rewrite(source, "handleSelect"), `import { useCallback } from "react";
+  assert.equal(
+    rewrite(source, "handleSelect"),
+    `import { useCallback } from "react";
 function Profile({ user, onSelect }: Props) {
   const handleSelect = useCallback(
     () => {
@@ -185,7 +223,8 @@ function Profile({ user, onSelect }: Props) {
     [onSelect, user.id],
   );
 }
-`);
+`,
+  );
 });
 
 test("async function declaration", () => {
@@ -195,7 +234,9 @@ test("async function declaration", () => {
   }
 }
 `;
-  assert.equal(rewrite(source, "handleSelect"), `import { useCallback } from "react";
+  assert.equal(
+    rewrite(source, "handleSelect"),
+    `import { useCallback } from "react";
 function Profile({ user, onSelect }: Props) {
   const handleSelect = useCallback(
     async () => {
@@ -204,7 +245,8 @@ function Profile({ user, onSelect }: Props) {
     [onSelect, user.id],
   );
 }
-`);
+`,
+  );
 });
 
 test("tsx generic gains a trailing comma", () => {
@@ -214,7 +256,9 @@ test("tsx generic gains a trailing comma", () => {
   }
 }
 `;
-  assert.equal(rewrite(source, "identity"), `import { useCallback } from "react";
+  assert.equal(
+    rewrite(source, "identity"),
+    `import { useCallback } from "react";
 function Profile() {
   const identity = useCallback(
     <T,>(value: T): T => {
@@ -223,7 +267,8 @@ function Profile() {
     [],
   );
 }
-`);
+`,
+  );
 });
 
 test("ts generic has no trailing comma", () => {
@@ -231,11 +276,14 @@ test("ts generic has no trailing comma", () => {
   function identity<T>(value: T): T { return value; }
 }
 `;
-  assert.equal(rewrite(source, "identity", ts.ScriptKind.TS), `import { useCallback } from "react";
+  assert.equal(
+    rewrite(source, "identity", ts.ScriptKind.TS),
+    `import { useCallback } from "react";
 function Profile() {
   const identity = useCallback(<T>(value: T): T => { return value; }, []);
 }
-`);
+`,
+  );
 });
 
 test("named import is extended", () => {
@@ -244,11 +292,14 @@ function Profile({ user }: Props) {
   const label = user.name;
 }
 `;
-  assert.equal(rewrite(source, "label"), `import { useState, useMemo } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import { useState, useMemo } from "react";
 function Profile({ user }: Props) {
   const label = useMemo(() => user.name, [user.name]);
 }
-`);
+`,
+  );
 });
 
 test("default import gains a named specifier", () => {
@@ -257,11 +308,14 @@ function Profile({ user }: Props) {
   const label = user.name;
 }
 `;
-  assert.equal(rewrite(source, "label"), `import React, { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import React, { useMemo } from "react";
 function Profile({ user }: Props) {
   const label = useMemo(() => user.name, [user.name]);
 }
-`);
+`,
+  );
 });
 
 test("namespace import qualifies the call", () => {
@@ -270,11 +324,14 @@ function Profile(props: Props) {
   const label = props.user.name;
 }
 `;
-  assert.equal(rewrite(source, "label"), `import * as React from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import * as React from "react";
 function Profile(props: Props) {
   const label = React.useMemo(() => props.user.name, [props.user.name]);
 }
-`);
+`,
+  );
 });
 
 test("existing hook import is left alone", () => {
@@ -283,11 +340,14 @@ function Profile({ user }: Props) {
   const label = user.name;
 }
 `;
-  assert.equal(rewrite(source, "label"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import { useMemo } from "react";
 function Profile({ user }: Props) {
   const label = useMemo(() => user.name, [user.name]);
 }
-`);
+`,
+  );
 });
 
 test("type-only react import stays type-only", () => {
@@ -296,12 +356,15 @@ function Profile({ user }: Props) {
   const label = user.name;
 }
 `;
-  assert.equal(rewrite(source, "label"), `import type { ReactNode } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import type { ReactNode } from "react";
 import { useMemo } from "react";
 function Profile({ user }: Props) {
   const label = useMemo(() => user.name, [user.name]);
 }
-`);
+`,
+  );
 });
 
 test("existing quotes are preserved", () => {
@@ -310,11 +373,14 @@ function Profile({ user }: Props) {
   const label = user.name;
 }
 `;
-  assert.equal(rewrite(source, "label"), `import { useState, useMemo } from 'react';
+  assert.equal(
+    rewrite(source, "label"),
+    `import { useState, useMemo } from 'react';
 function Profile({ user }: Props) {
   const label = useMemo(() => user.name, [user.name]);
 }
-`);
+`,
+  );
 });
 
 test("new react import is inserted first", () => {
@@ -323,10 +389,13 @@ function Profile({ user }: Props) {
   const label = format(user.name);
 }
 `;
-  assert.equal(rewrite(source, "label"), `import { useMemo } from "react";
+  assert.equal(
+    rewrite(source, "label"),
+    `import { useMemo } from "react";
 import { format } from "./format";
 function Profile({ user }: Props) {
   const label = useMemo(() => format(user.name), [user.name]);
 }
-`);
+`,
+  );
 });

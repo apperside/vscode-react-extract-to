@@ -54,13 +54,21 @@ function finish(
   if (isInsideClass(declaration)) return undefined;
   const reactive = nearestReactive(statement);
   if (!reactive || reactive === declaration) return undefined;
-  if (!reactive.body || !ts.isBlock(reactive.body) || statement.parent !== reactive.body) return undefined;
+  if (!reactive.body || !ts.isBlock(reactive.body) || statement.parent !== reactive.body)
+    return undefined;
   if (precedingExit(reactive.body, statement)) return undefined;
 
   if (ts.isFunctionDeclaration(declaration)) {
-    if (declaration.asteriskToken || !declaration.body || hasOverload(reactive.body, declaration)) return undefined;
+    if (declaration.asteriskToken || !declaration.body || hasOverload(reactive.body, declaration))
+      return undefined;
     if (containsHookCall(declaration.body)) return undefined;
-    return { reactiveFunction: reactive, statement, declaration, hook: "useCallback", callback: declaration };
+    return {
+      reactiveFunction: reactive,
+      statement,
+      declaration,
+      hook: "useCallback",
+      callback: declaration,
+    };
   }
 
   const list = declaration.parent;
@@ -81,7 +89,10 @@ function finish(
   };
 }
 
-function functionSpan(sourceFile: ts.SourceFile, fn: ts.FunctionDeclaration): { start: number; end: number } {
+function functionSpan(
+  sourceFile: ts.SourceFile,
+  fn: ts.FunctionDeclaration,
+): { start: number; end: number } {
   const keyword = sourceFile.text.indexOf("function", fn.getStart(sourceFile));
   const start = keyword === -1 ? fn.getStart(sourceFile) : keyword;
   const end = fn.name ? fn.name.getEnd() : start + "function".length;
@@ -119,7 +130,8 @@ function nearestReactive(statement: ts.Statement): ts.FunctionLikeDeclaration | 
   let current: ts.Node | undefined = statement.parent;
   while (current) {
     if (isFunctionLike(current) && isReactive(current)) {
-      if (current.body && ts.isBlock(current.body) && statement.parent === current.body) return current;
+      if (current.body && ts.isBlock(current.body) && statement.parent === current.body)
+        return current;
       if (isInside(statement, current)) return undefined;
     }
     current = current.parent;
@@ -128,14 +140,21 @@ function nearestReactive(statement: ts.Statement): ts.FunctionLikeDeclaration | 
 }
 
 function isFunctionLike(node: ts.Node): node is ts.FunctionLikeDeclaration {
-  return ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node);
+  return (
+    ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node)
+  );
 }
 
 function isReactive(fn: ts.FunctionLikeDeclaration): boolean {
   if (isInsideClass(fn)) return false;
   const names = [ownName(fn), assignedName(fn)].filter((name): name is string => !!name);
   if (names.some((name) => /^[A-Z]/.test(name) || /^use[A-Z0-9]/.test(name))) return true;
-  if (ts.isFunctionDeclaration(fn) && !fn.name && hasModifier(fn, ts.SyntaxKind.ExportKeyword) && hasModifier(fn, ts.SyntaxKind.DefaultKeyword)) {
+  if (
+    ts.isFunctionDeclaration(fn) &&
+    !fn.name &&
+    hasModifier(fn, ts.SyntaxKind.ExportKeyword) &&
+    hasModifier(fn, ts.SyntaxKind.DefaultKeyword)
+  ) {
     return true;
   }
   return isFunctionPassedToMemo(fn);
@@ -148,14 +167,21 @@ function ownName(fn: ts.FunctionLikeDeclaration): string | undefined {
 
 function assignedName(fn: ts.Node): string | undefined {
   const parent = fn.parent;
-  if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name) && parent.initializer === fn) {
+  if (
+    ts.isVariableDeclaration(parent) &&
+    ts.isIdentifier(parent.name) &&
+    parent.initializer === fn
+  ) {
     return parent.name.text;
   }
   return undefined;
 }
 
 function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
-  return ts.canHaveModifiers(node) && (ts.getModifiers(node)?.some((modifier) => modifier.kind === kind) ?? false);
+  return (
+    ts.canHaveModifiers(node) &&
+    (ts.getModifiers(node)?.some((modifier) => modifier.kind === kind) ?? false)
+  );
 }
 
 function isFunctionPassedToMemo(fn: ts.Node): boolean {
@@ -216,7 +242,8 @@ function hasOverload(body: ts.Block, fn: ts.FunctionDeclaration): boolean {
   const index = body.statements.indexOf(fn);
   for (let i = 0; i < index; i++) {
     const sibling = body.statements[i];
-    if (ts.isFunctionDeclaration(sibling) && sibling.name?.text === fn.name.text && !sibling.body) return true;
+    if (ts.isFunctionDeclaration(sibling) && sibling.name?.text === fn.name.text && !sibling.body)
+      return true;
   }
   return false;
 }
@@ -239,7 +266,10 @@ function isGenerator(initializer: ts.Expression): boolean {
 }
 
 function isCallbackInitializer(initializer: ts.Expression): boolean {
-  return ts.isArrowFunction(initializer) || (ts.isFunctionExpression(initializer) && !initializer.asteriskToken);
+  return (
+    ts.isArrowFunction(initializer) ||
+    (ts.isFunctionExpression(initializer) && !initializer.asteriskToken)
+  );
 }
 
 function containsHookCall(root: ts.Node): boolean {
@@ -253,7 +283,8 @@ function containsHookCall(root: ts.Node): boolean {
     ts.forEachChild(node, visit);
   };
   const unwrapped = ts.isExpression(root) ? unwrapExpression(root) : root;
-  if (ts.isCallExpression(unwrapped) && isHookCallee(unwrapExpression(unwrapped.expression))) return true;
+  if (ts.isCallExpression(unwrapped) && isHookCallee(unwrapExpression(unwrapped.expression)))
+    return true;
   visit(root);
   return found;
 }

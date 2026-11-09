@@ -11,7 +11,13 @@ function bindingStart(source: string, binding: string): number {
 }
 
 function deps(source: string, binding: string): string[] {
-  const sourceFile = ts.createSourceFile("fixture.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const sourceFile = ts.createSourceFile(
+    "fixture.tsx",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
   const start = bindingStart(source, binding);
   assert.notEqual(start, -1, binding);
   const target = findExtractTarget(sourceFile, { start, end: start + binding.length });
@@ -55,13 +61,9 @@ const cases: Array<[string, string, string[]]> = [
     "item",
     ["items", "props.id"],
   ],
+  ["function Profile({ user }: Props) {\n  const label = user?.name;\n}\n", "label", ["user.name"]],
   [
-    "function Profile({ user }: Props) {\n  const label = user?.name;\n}\n",
-    "label",
-    ["user.name"],
-  ],
-  [
-    "function Comp() {\n  const n = 1;\n  const s = \"a\";\n  const empty = null;\n  const enabled = true;\n  const label = String(n) + s + empty + enabled;\n}\n",
+    'function Comp() {\n  const n = 1;\n  const s = "a";\n  const empty = null;\n  const enabled = true;\n  const label = String(n) + s + empty + enabled;\n}\n',
     "label",
     ["enabled"],
   ],
@@ -91,7 +93,7 @@ const cases: Array<[string, string, string[]]> = [
     [],
   ],
   [
-    "import { format } from \"./format\";\nconst LIMIT = 10;\nfunction Comp({ user }: Props) {\n  const label = format(user.name, LIMIT);\n}\n",
+    'import { format } from "./format";\nconst LIMIT = 10;\nfunction Comp({ user }: Props) {\n  const label = format(user.name, LIMIT);\n}\n',
     "label",
     ["user.name"],
   ],
@@ -110,18 +112,14 @@ const cases: Array<[string, string, string[]]> = [
     "label",
     ["outer"],
   ],
-  [
-    "function Profile() {\n  function f() { f(); }\n}\n",
-    "f",
-    ["f"],
-  ],
+  ["function Profile() {\n  function f() { f(); }\n}\n", "f", ["f"]],
   [
     "function Comp({ Icon, user }: Props) {\n  const label = <><Icon />{user.name}<div /></>;\n}\n",
     "label",
     ["Icon", "user.name"],
   ],
   [
-    "import { Icon } from \"./icon\";\nfunction Comp({ user }: Props) {\n  const label = <Icon>{user.name}</Icon>;\n}\n",
+    'import { Icon } from "./icon";\nfunction Comp({ user }: Props) {\n  const label = <Icon>{user.name}</Icon>;\n}\n',
     "label",
     ["user.name"],
   ],
@@ -131,25 +129,21 @@ const cases: Array<[string, string, string[]]> = [
     ["user.id"],
   ],
   [
-    "function Comp({ user }: Props) {\n  const label = user.name;\n  function inner() {\n    const user = { name: \"local\" };\n    return user.name;\n  }\n}\n",
+    'function Comp({ user }: Props) {\n  const label = user.name;\n  function inner() {\n    const user = { name: "local" };\n    return user.name;\n  }\n}\n',
     "label",
     ["user.name"],
   ],
   [
-    "function Comp({ user }: Props) {\n  const label = (() => { const user = { name: \"local\" }; return user.name; })();\n}\n",
+    'function Comp({ user }: Props) {\n  const label = (() => { const user = { name: "local" }; return user.name; })();\n}\n',
     "label",
     [],
   ],
   [
-    "function Comp({ user }: Props) {\n  const label = () => { const user = { name: \"local\" }; return user.name; };\n}\n",
+    'function Comp({ user }: Props) {\n  const label = () => { const user = { name: "local" }; return user.name; };\n}\n',
     "label",
     [],
   ],
-  [
-    "function Comp({ obj }: Props) {\n  const run = () => { obj.foo = 1; };\n}\n",
-    "run",
-    ["obj"],
-  ],
+  ["function Comp({ obj }: Props) {\n  const run = () => { obj.foo = 1; };\n}\n", "run", ["obj"]],
   [
     "interface User { name: string }\nfunction Comp({ user }: { user: User }) {\n  const label: User = user;\n}\n",
     "label",

@@ -21,10 +21,23 @@ test("useMemo for a const in a function component", () => {
 });
 
 test("useCallback for an arrow, an async arrow, and a function expression", () => {
-  assert.equal(at("function Profile() {\n  const handle = () => 1;\n}\n", "handle")?.hook, "useCallback");
-  assert.equal(at("function Profile() {\n  const handle = async () => 1;\n}\n", "handle")?.hook, "useCallback");
-  assert.equal(at("function Profile() {\n  const handle = function () { return 1; };\n}\n", "handle")?.hook, "useCallback");
-  assert.equal(at("function Profile() {\n  const handle = async function () { return 1; };\n}\n", "handle")?.hook, "useCallback");
+  assert.equal(
+    at("function Profile() {\n  const handle = () => 1;\n}\n", "handle")?.hook,
+    "useCallback",
+  );
+  assert.equal(
+    at("function Profile() {\n  const handle = async () => 1;\n}\n", "handle")?.hook,
+    "useCallback",
+  );
+  assert.equal(
+    at("function Profile() {\n  const handle = function () { return 1; };\n}\n", "handle")?.hook,
+    "useCallback",
+  );
+  assert.equal(
+    at("function Profile() {\n  const handle = async function () { return 1; };\n}\n", "handle")
+      ?.hook,
+    "useCallback",
+  );
 });
 
 test("useCallback for a nested function declaration", () => {
@@ -40,7 +53,10 @@ test("a conditional expression that returns functions is useMemo", () => {
 });
 
 test("let and a destructuring pattern are targets", () => {
-  assert.equal(at("function Profile({ user }: Props) {\n  let label = user.name;\n}\n", "label")?.hook, "useMemo");
+  assert.equal(
+    at("function Profile({ user }: Props) {\n  let label = user.name;\n}\n", "label")?.hook,
+    "useMemo",
+  );
   assert.equal(
     at("function Profile({ user }: Props) {\n  const { name } = user;\n}\n", "{ name }")?.hook,
     "useMemo",
@@ -71,7 +87,8 @@ test("reactive scopes include components, hooks, anonymous default functions, an
 });
 
 test("the nearest reactive function wins", () => {
-  const source = "function Outer() {\n  function useInner(props: Props) {\n    const label = props.name;\n  }\n}\n";
+  const source =
+    "function Outer() {\n  function useInner(props: Props) {\n    const label = props.name;\n  }\n}\n";
   const target = at(source, "label");
   assert.equal(target?.reactiveFunction.getText().startsWith("function useInner"), true);
 });
@@ -79,11 +96,17 @@ test("the nearest reactive function wins", () => {
 test("nothing is offered outside a reactive scope or on a non-binding selection", () => {
   assert.equal(at("function profile() {\n  const label = 1;\n}\n", "label"), undefined);
   assert.equal(at("export default () => {\n  const label = 1;\n};\n", "label"), undefined);
-  assert.equal(at("class Profile {\n  render() {\n    const label = 1;\n  }\n}\n", "label"), undefined);
+  assert.equal(
+    at("class Profile {\n  render() {\n    const label = 1;\n  }\n}\n", "label"),
+    undefined,
+  );
   assert.equal(at("function Profile() {\n  var label = 1;\n}\n", "label"), undefined);
   const source = "function Profile({ user }: Props) {\n  const label = user.name;\n}\n";
   const init = source.indexOf("user.name");
-  assert.equal(findExtractTarget(parse(source), { start: init, end: init + "user.name".length }), undefined);
+  assert.equal(
+    findExtractTarget(parse(source), { start: init, end: init + "user.name".length }),
+    undefined,
+  );
   const fn = "function Profile() {\n  function handle(id: string) { return id; }\n}\n";
   const param = fn.indexOf("id: string");
   assert.equal(findExtractTarget(parse(fn), { start: param, end: param + 2 }), undefined);
@@ -100,9 +123,11 @@ test("nothing is offered when the hook call would be conditional", () => {
   for (const source of refused) {
     assert.equal(at(source, "label"), undefined, source);
   }
-  const allowed = "function Profile(props: Props) {\n  function helper() {\n    return props.name;\n  }\n  const label = props.name;\n}\n";
+  const allowed =
+    "function Profile(props: Props) {\n  function helper() {\n    return props.name;\n  }\n  const label = props.name;\n}\n";
   assert.equal(at(allowed, "label")?.hook, "useMemo");
-  const afterCall = "function Profile(props: Props) {\n  if (flag) doSomething();\n  const label = props.name;\n}\n";
+  const afterCall =
+    "function Profile(props: Props) {\n  if (flag) doSomething();\n  const label = props.name;\n}\n";
   assert.equal(at(afterCall, "label")?.hook, "useMemo");
 });
 

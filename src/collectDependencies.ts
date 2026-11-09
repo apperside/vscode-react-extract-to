@@ -64,7 +64,8 @@ function visit(node: ts.Node, scope: Scope, references: Reference[]): void {
   if (ts.isForOfStatement(node) || ts.isForInStatement(node)) {
     const loopScope: Scope = { parent: scope, bindings: new Map() };
     if (ts.isVariableDeclarationList(node.initializer)) {
-      for (const declaration of node.initializer.declarations) bindBindingName(loopScope, declaration.name);
+      for (const declaration of node.initializer.declarations)
+        bindBindingName(loopScope, declaration.name);
     }
     visit(node.expression, scope, references);
     visit(node.statement, loopScope, references);
@@ -73,7 +74,8 @@ function visit(node: ts.Node, scope: Scope, references: Reference[]): void {
   if (ts.isForStatement(node)) {
     const loopScope: Scope = { parent: scope, bindings: new Map() };
     if (node.initializer && ts.isVariableDeclarationList(node.initializer)) {
-      for (const declaration of node.initializer.declarations) bindBindingName(loopScope, declaration.name);
+      for (const declaration of node.initializer.declarations)
+        bindBindingName(loopScope, declaration.name);
     } else if (node.initializer) visit(node.initializer, scope, references);
     if (node.condition) visit(node.condition, loopScope, references);
     if (node.incrementor) visit(node.incrementor, loopScope, references);
@@ -104,15 +106,18 @@ function bindModule(scope: Scope, sourceFile: ts.SourceFile): void {
         for (const element of named.elements) scope.bindings.set(element.name.text, element.name);
       }
     }
-    if (ts.isFunctionDeclaration(statement) && statement.name) scope.bindings.set(statement.name.text, statement.name);
+    if (ts.isFunctionDeclaration(statement) && statement.name)
+      scope.bindings.set(statement.name.text, statement.name);
     if (ts.isVariableStatement(statement)) bindVariableStatement(scope, statement);
   }
 }
 
 function bindBlock(scope: Scope, block: ts.Block): void {
   for (const statement of block.statements) {
-    if (ts.isFunctionDeclaration(statement) && statement.name) scope.bindings.set(statement.name.text, statement.name);
-    if (ts.isClassDeclaration(statement) && statement.name) scope.bindings.set(statement.name.text, statement.name);
+    if (ts.isFunctionDeclaration(statement) && statement.name)
+      scope.bindings.set(statement.name.text, statement.name);
+    if (ts.isClassDeclaration(statement) && statement.name)
+      scope.bindings.set(statement.name.text, statement.name);
     if (ts.isVariableStatement(statement)) bindVariableStatement(scope, statement);
   }
 }
@@ -120,7 +125,8 @@ function bindBlock(scope: Scope, block: ts.Block): void {
 function bindFunctionVars(scope: Scope, body: ts.Node): void {
   const visitNode = (node: ts.Node) => {
     if (isFunctionLike(node)) return;
-    if (ts.isVariableStatement(node) && isVarList(node.declarationList)) bindVariableStatement(scope, node);
+    if (ts.isVariableStatement(node) && isVarList(node.declarationList))
+      bindVariableStatement(scope, node);
     ts.forEachChild(node, visitNode);
   };
   ts.forEachChild(body, visitNode);
@@ -131,7 +137,8 @@ function isVarList(list: ts.VariableDeclarationList): boolean {
 }
 
 function bindVariableStatement(scope: Scope, statement: ts.VariableStatement): void {
-  for (const declaration of statement.declarationList.declarations) bindBindingName(scope, declaration.name);
+  for (const declaration of statement.declarationList.declarations)
+    bindBindingName(scope, declaration.name);
 }
 
 function bindBindingName(scope: Scope, name: ts.BindingName): void {
@@ -161,14 +168,26 @@ function isValueReference(node: ts.Identifier): boolean {
   if (ts.isPropertyAccessExpression(parent) && parent.name === node) return false;
   if (ts.isPropertyAssignment(parent) && parent.name === node) return false;
   if (ts.isVariableDeclaration(parent) && parent.name === node) return false;
-  if ((ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent)) && parent.name === node) return false;
+  if ((ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent)) && parent.name === node)
+    return false;
   if (ts.isParameter(parent) && parent.name === node) return false;
-  if (ts.isBindingElement(parent) && (parent.name === node || parent.propertyName === node)) return false;
-  if (ts.isImportSpecifier(parent) || ts.isImportClause(parent) || ts.isNamespaceImport(parent)) return false;
-  if (ts.isClassDeclaration(parent) || ts.isInterfaceDeclaration(parent) || ts.isTypeAliasDeclaration(parent)) return false;
+  if (ts.isBindingElement(parent) && (parent.name === node || parent.propertyName === node))
+    return false;
+  if (ts.isImportSpecifier(parent) || ts.isImportClause(parent) || ts.isNamespaceImport(parent))
+    return false;
+  if (
+    ts.isClassDeclaration(parent) ||
+    ts.isInterfaceDeclaration(parent) ||
+    ts.isTypeAliasDeclaration(parent)
+  )
+    return false;
   if (ts.isMethodDeclaration(parent) && parent.name === node) return false;
   if (ts.isJsxAttribute(parent)) return false;
-  if (ts.isJsxOpeningElement(parent) || ts.isJsxSelfClosingElement(parent) || ts.isJsxClosingElement(parent)) {
+  if (
+    ts.isJsxOpeningElement(parent) ||
+    ts.isJsxSelfClosingElement(parent) ||
+    ts.isJsxClosingElement(parent)
+  ) {
     return parent.tagName === node && /^[A-Z]/.test(node.text);
   }
   return true;
@@ -185,7 +204,12 @@ function isInTypePosition(node: ts.Node): boolean {
 
 function isWrite(node: ts.Identifier): boolean {
   const parent = node.parent;
-  return !!parent && ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken && parent.left === node;
+  return (
+    !!parent &&
+    ts.isBinaryExpression(parent) &&
+    parent.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+    parent.left === node
+  );
 }
 
 function dependencyKey(ident: ts.Identifier): string | undefined {
@@ -217,7 +241,8 @@ function widen(node: ts.Node): ts.Node {
 
 function significantParent(node: ts.Node): ts.Node | undefined {
   let current = node;
-  while (current.parent && isWrapper(current.parent) && current.parent.expression === current) current = current.parent;
+  while (current.parent && isWrapper(current.parent) && current.parent.expression === current)
+    current = current.parent;
   return current.parent;
 }
 
@@ -227,8 +252,19 @@ function sameExpression(candidate: ts.Node, target: ts.Node): boolean {
   return current === target;
 }
 
-function isWrapper(node: ts.Node): node is ts.ParenthesizedExpression | ts.AsExpression | ts.SatisfiesExpression | ts.NonNullExpression {
-  return ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node);
+function isWrapper(
+  node: ts.Node,
+): node is
+  | ts.ParenthesizedExpression
+  | ts.AsExpression
+  | ts.SatisfiesExpression
+  | ts.NonNullExpression {
+  return (
+    ts.isParenthesizedExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isSatisfiesExpression(node) ||
+    ts.isNonNullExpression(node)
+  );
 }
 
 function isCallee(member: ts.Node): boolean {
@@ -251,8 +287,15 @@ function chainText(node: ts.Node): string | undefined {
   return undefined;
 }
 
-function isStable(decl: ts.Node, reactive: ts.FunctionLikeDeclaration, references: Reference[]): boolean {
-  return isStableKnownHookValue(decl, references) || isFunctionWithoutCapturedValues(decl, reactive, references);
+function isStable(
+  decl: ts.Node,
+  reactive: ts.FunctionLikeDeclaration,
+  references: Reference[],
+): boolean {
+  return (
+    isStableKnownHookValue(decl, references) ||
+    isFunctionWithoutCapturedValues(decl, reactive, references)
+  );
 }
 
 function isStableKnownHookValue(decl: ts.Node, references: Reference[]): boolean {
@@ -266,11 +309,16 @@ function isStableKnownHookValue(decl: ts.Node, references: Reference[]): boolean
   if (!name) return false;
   if ((name === "useRef" || name === "useEffectEvent") && declarator.name === decl) return true;
   if (name === "useState" || name === "useReducer" || name === "useActionState") {
-    if (!ts.isArrayBindingPattern(declarator.name) || !isSecondElement(declarator.name, decl)) return false;
+    if (!ts.isArrayBindingPattern(declarator.name) || !isSecondElement(declarator.name, decl))
+      return false;
     if (name === "useState" && writeCount(decl, references) > 1) return false;
     return true;
   }
-  if (name === "useTransition" && ts.isArrayBindingPattern(declarator.name) && isSecondElement(declarator.name, decl)) {
+  if (
+    name === "useTransition" &&
+    ts.isArrayBindingPattern(declarator.name) &&
+    isSecondElement(declarator.name, decl)
+  ) {
     return true;
   }
   return false;
@@ -285,27 +333,34 @@ function isFunctionWithoutCapturedValues(
   if (!fn) return false;
   for (const reference of references) {
     if (!isInside(reference.ident, fn)) continue;
-    if (!isInside(reference.decl, reactive) || isDeclaredInsideCallback(reference.decl, fn)) continue;
+    if (!isInside(reference.decl, reactive) || isDeclaredInsideCallback(reference.decl, fn))
+      continue;
     if (isStableKnownHookValue(reference.decl, references)) continue;
     return false;
   }
   return true;
 }
 
-function directFunction(decl: ts.Node, reactive: ts.FunctionLikeDeclaration): ts.FunctionLikeDeclaration | undefined {
+function directFunction(
+  decl: ts.Node,
+  reactive: ts.FunctionLikeDeclaration,
+): ts.FunctionLikeDeclaration | undefined {
   if (!reactive.body || !ts.isBlock(reactive.body)) return undefined;
   for (const statement of reactive.body.statements) {
     if (ts.isFunctionDeclaration(statement) && statement.name === decl) return statement;
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations) {
       const initializer = declaration.initializer && unwrapExpression(declaration.initializer);
-      if (declaration.name === decl && initializer && isFunctionExpressionLike(initializer)) return initializer;
+      if (declaration.name === decl && initializer && isFunctionExpressionLike(initializer))
+        return initializer;
     }
   }
   return undefined;
 }
 
-function isFunctionExpressionLike(node: ts.Expression): node is ts.ArrowFunction | ts.FunctionExpression {
+function isFunctionExpressionLike(
+  node: ts.Expression,
+): node is ts.ArrowFunction | ts.FunctionExpression {
   return ts.isArrowFunction(node) || ts.isFunctionExpression(node);
 }
 
@@ -320,11 +375,16 @@ function variableDeclarator(name: ts.Node): ts.VariableDeclaration | undefined {
 }
 
 function isConst(declaration: ts.VariableDeclaration): boolean {
-  return ts.isVariableDeclarationList(declaration.parent) && !!(declaration.parent.flags & ts.NodeFlags.Const);
+  return (
+    ts.isVariableDeclarationList(declaration.parent) &&
+    !!(declaration.parent.flags & ts.NodeFlags.Const)
+  );
 }
 
 function isStableLiteral(node: ts.Expression): boolean {
-  return ts.isStringLiteral(node) || ts.isNumericLiteral(node) || node.kind === ts.SyntaxKind.NullKeyword;
+  return (
+    ts.isStringLiteral(node) || ts.isNumericLiteral(node) || node.kind === ts.SyntaxKind.NullKeyword
+  );
 }
 
 function unwrapAs(expr: ts.Expression): ts.Expression {
@@ -368,7 +428,7 @@ function isDeclaredInsideCallback(decl: ts.Node, callback: ts.Node): boolean {
 
 function reduce(hits: Array<{ key: string; pos: number }>): string[] {
   const keys = new Set(hits.map((hit) => hit.key));
-  for (const key of [...keys]) {
+  for (const key of keys) {
     const parts = key.split(".");
     for (let length = 1; length < parts.length; length++) {
       if (keys.has(parts.slice(0, length).join("."))) {
@@ -396,5 +456,7 @@ function isInside(node: ts.Node, ancestor: ts.Node): boolean {
 }
 
 function isFunctionLike(node: ts.Node): node is ts.FunctionLikeDeclaration {
-  return ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node);
+  return (
+    ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node)
+  );
 }

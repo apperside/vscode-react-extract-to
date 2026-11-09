@@ -1,26 +1,26 @@
 {
-  "name": "extract-in-memo-callback",
+  "name": "react-extract",
   "displayName": "Extract in useMemo and useCallback",
-  "description": "Extract a declaration in a React component or custom hook into useMemo or useCallback.",
   "version": "0.0.1",
-  "publisher": "local",
-  "license": "MIT",
-  "engines": {
-    "vscode": "^1.85.0"
-  },
-  "categories": ["Other"],
-  "activationEvents": [
-    "onLanguage:javascript",
-    "onLanguage:javascriptreact",
-    "onLanguage:typescript",
-    "onLanguage:typescriptreact"
+  "description": "Extract a declaration in a React component or custom hook into useMemo or useCallback.",
+  "categories": [
+    "Other"
   ],
-  "main": "./out/extension.js",
-  "contributes": {},
+  "license": "MIT",
+  "publisher": "local",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/apperside/vscode-react-extract-to.git"
+  },
   "type": "module",
+  "main": "./out/extension.js",
   "scripts": {
     "test": "node --import tsx --test src/test/*.test.ts",
-    "compile": "tsc -p ."
+    "compile": "tsc -p .",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check"
   },
   "dependencies": {
     "typescript": "^5.6.3"
@@ -28,6 +28,18 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/vscode": "^1.85.0",
+    "oxfmt": "^0.77.0",
+    "oxlint": "^1.92.0",
     "tsx": "^4.19.2"
+  },
+  "contributes": {},
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
   }
 }

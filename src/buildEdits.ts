@@ -39,23 +39,36 @@ function rewriteStatement(
 ): string {
   if (ts.isFunctionDeclaration(target.declaration)) {
     const arrow = printArrow(target.declaration, sourceFile);
-    const call = printCall(callee, arrow, dependencies, target.declaration.getText(sourceFile).includes("\n"), baseIndent);
+    const call = printCall(
+      callee,
+      arrow,
+      dependencies,
+      target.declaration.getText(sourceFile).includes("\n"),
+      baseIndent,
+    );
     return `const ${target.declaration.name?.text ?? ""} = ${call};`;
   }
   const declaration = target.declaration;
   const initializer = declaration.initializer;
   if (!initializer) return target.statement.getText(sourceFile);
-  const callback = target.hook === "useCallback"
-    ? initializer.getText(sourceFile)
-    : `() => ${initializerText(initializer, sourceFile)}`;
-  const multiline = (target.hook === "useCallback" ? initializer.getText(sourceFile) : initializer.getText(sourceFile)).includes("\n");
+  const callback =
+    target.hook === "useCallback"
+      ? initializer.getText(sourceFile)
+      : `() => ${initializerText(initializer, sourceFile)}`;
+  const multiline = (
+    target.hook === "useCallback"
+      ? initializer.getText(sourceFile)
+      : initializer.getText(sourceFile)
+  ).includes("\n");
   const call = printCall(callee, callback, dependencies, multiline, baseIndent);
   const type = declaration.type ? `: ${declaration.type.getText(sourceFile)}` : "";
   const extracted = `const ${declaration.name.getText(sourceFile)}${type} = ${call};`;
   const list = declaration.parent;
   if (!ts.isVariableDeclarationList(list) || list.declarations.length === 1) return extracted;
   const keyword = list.flags & ts.NodeFlags.Const ? "const" : "let";
-  const rest = list.declarations.filter((item) => item !== declaration).map((item) => item.getText(sourceFile));
+  const rest = list.declarations
+    .filter((item) => item !== declaration)
+    .map((item) => item.getText(sourceFile));
   if (rest.length === 0) return extracted;
   return `${keyword} ${rest.join(", ")};\n${baseIndent}${extracted}`;
 }
@@ -113,7 +126,12 @@ function printCall(
 
 function reactNamespace(sourceFile: ts.SourceFile): string | undefined {
   for (const statement of sourceFile.statements) {
-    if (!ts.isImportDeclaration(statement) || !isReactModule(statement) || statement.importClause?.isTypeOnly) continue;
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !isReactModule(statement) ||
+      statement.importClause?.isTypeOnly
+    )
+      continue;
     const named = statement.importClause?.namedBindings;
     if (named && ts.isNamespaceImport(named)) return named.name.text;
   }
@@ -121,7 +139,10 @@ function reactNamespace(sourceFile: ts.SourceFile): string | undefined {
 }
 
 function ensureReactImport(sourceFile: ts.SourceFile, hook: string): TextEdit | undefined {
-  const imports = sourceFile.statements.filter((statement): statement is ts.ImportDeclaration => ts.isImportDeclaration(statement) && isReactModule(statement));
+  const imports = sourceFile.statements.filter(
+    (statement): statement is ts.ImportDeclaration =>
+      ts.isImportDeclaration(statement) && isReactModule(statement),
+  );
   const valueImport = imports.find((statement) => !statement.importClause?.isTypeOnly);
   if (valueImport && hasValueSpecifier(valueImport, hook)) return undefined;
   if (valueImport?.importClause) {
@@ -137,10 +158,15 @@ function ensureReactImport(sourceFile: ts.SourceFile, hook: string): TextEdit | 
   }
   const anchor = imports.length > 0 ? imports[imports.length - 1] : undefined;
   if (anchor) {
-    return { start: anchor.getEnd(), end: anchor.getEnd(), newText: `\nimport { ${hook} } from "react";` };
+    return {
+      start: anchor.getEnd(),
+      end: anchor.getEnd(),
+      newText: `\nimport { ${hook} } from "react";`,
+    };
   }
   const prologue = directiveEnd(sourceFile);
-  if (prologue > 0) return { start: prologue, end: prologue, newText: `\nimport { ${hook} } from "react";` };
+  if (prologue > 0)
+    return { start: prologue, end: prologue, newText: `\nimport { ${hook} } from "react";` };
   const first = sourceFile.statements[0];
   const position = first ? first.getStart(sourceFile) : 0;
   return { start: position, end: position, newText: `import { ${hook} } from "react";\n` };
@@ -162,11 +188,16 @@ function hasValueSpecifier(statement: ts.ImportDeclaration, hook: string): boole
 }
 
 function isReactModule(statement: ts.ImportDeclaration): boolean {
-  return ts.isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text === "react";
+  return (
+    ts.isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text === "react"
+  );
 }
 
 function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
-  return ts.canHaveModifiers(node) && (ts.getModifiers(node)?.some((modifier) => modifier.kind === kind) ?? false);
+  return (
+    ts.canHaveModifiers(node) &&
+    (ts.getModifiers(node)?.some((modifier) => modifier.kind === kind) ?? false)
+  );
 }
 
 function indentAt(source: string, position: number): string {
