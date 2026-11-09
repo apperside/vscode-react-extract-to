@@ -6,6 +6,8 @@ A refactor for React. Put the cursor on a variable or function inside a componen
 
 Works in JavaScript, JSX, TypeScript, and TSX.
 
+![The lightbulb wraps an inline handler in useCallback](docs/demo.gif)
+
 ## Before and after
 
 ```tsx
